@@ -2,4 +2,5 @@
 ===
 
 - https://preprocess-training-demo.streamlit.app/
-- 説明も↑に書いてあります
+- 説明は↑に書いてあります
+
