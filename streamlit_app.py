@@ -130,50 +130,72 @@ def compare_results(raw_data, processed_data, user_code):
             st.write("### 実際の結果")
             st.write(result_data)
 
+# トップページ
+def show_top_page():
+    st.title("前処理プログラム作成の練習アプリ")
+
+    st.header("利用者向け")
+    st.write("このアプリでは、データの前処理プログラムを作成する練習ができます。")
+    st.write("1. サイドバーから問題を選択してください。")
+    st.write("2. 問題の説明と変換前後のデータを確認してください。")
+    st.write("3. サンプルPythonファイルをダウンロードし、前処理プログラムを作成してください。")
+    st.write("4. 作成したPythonファイルをアップロードし、提出してください。")
+    st.write("5. 結果を確認し、正解するまで試行錯誤してください。")
+    st.write("バグの報告は、https://github.com/gghatano/preprocess_training のISSUEに立ててください。")
+
+    st.header("開発者向け")
+    st.write("このアプリのプログラムは、https://github.com/gghatano/preprocess_training にて管理しています。")
+    st.write("問題を追加したい場合は、以下の手順に従ってください。")
+    st.write("1. problem0001フォルダの中身を参考に、`problem[0-9]{4}`フォルダを作成し、`explain.toml`、`before.csv`、`after.csv`ファイルを追加してください。")
+    st.write("2. プルリクエストを送信してください。マージしたら反映されます。")
+
 # アプリ本体=================================
 
 problems = load_problems()
 
 st.sidebar.title("問題一覧")
 problem_names = {folder: problem['name'] for folder, problem in problems.items()}
-selected_problem = st.sidebar.radio("問題を選択してください", list(problem_names.keys()), format_func=lambda x: problem_names[x])
-ss.problem_id = selected_problem
+selected_problem = st.sidebar.radio("問題を選択してください", ["トップページ"] + list(problem_names.keys()), format_func=lambda x: problem_names[x] if x != "トップページ" else x)
 
-st.title(problems[ss.problem_id]['name'])
-
-if ss.now == 0:
-    st.write('#### Step1: 問題の確認')
-    show_question(ss.problem_id)
-    
-    col1, col2, col3 = st.columns(3)
-    col1.button('前に戻る', key=f"{ss.problem_id}_prev_0", disabled=True)
-    col2.button('はじめから', key=f"{ss.problem_id}_reset_0", on_click=reset)
-    if col3.button('次に進む', key=f"{ss.problem_id}_next_0"):
-        countup()
-    
-elif ss.now == 1:
-    st.write('#### Step2: Pythonコードの提出')
-    upload_and_validate()
-    
-    col1, col2, col3 = st.columns(3)
-    if col1.button('前に戻る', key=f"{ss.problem_id}_prev_1"):
-        countdown()
-    col2.button('はじめから', key=f"{ss.problem_id}_reset_1", on_click=reset)
-    if col3.button('次に進む', key=f"{ss.problem_id}_next_1"):
-        countup()
-    
-elif ss.now == 2:
-    st.write('#### Step3: 結果の確認')
-    raw_data = pd.read_csv(os.path.join(ss.problem_id, "before.csv"))
-    processed_data = pd.read_csv(os.path.join(ss.problem_id, "after.csv"))
-    compare_results(raw_data, processed_data, ss.user_code)
-    
-    col1, col2, col3 = st.columns(3)
-    if col1.button('前に戻る', key=f"{ss.problem_id}_prev_2"):
-        countdown()
-    col2.button('はじめから', key=f"{ss.problem_id}_reset_2", on_click=reset)
-    col3.button('次に進む', key=f"{ss.problem_id}_next_2", disabled=True)
-    
+if selected_problem == "トップページ":
+    show_top_page()
 else:
-    st.write('### 完了！')
-    st.success('全てのステップが完了しました')
+    ss.problem_id = selected_problem
+    st.title(problems[ss.problem_id]['name'])
+
+    if ss.now == 0:
+        st.write('#### Step1: 問題の確認')
+        show_question(ss.problem_id)
+        
+        col1, col2, col3 = st.columns(3)
+        col1.button('前に戻る', key=f"{ss.problem_id}_prev_0", disabled=True)
+        col2.button('はじめから', key=f"{ss.problem_id}_reset_0", on_click=reset)
+        if col3.button('次に進む', key=f"{ss.problem_id}_next_0"):
+            countup()
+        
+    elif ss.now == 1:
+        st.write('#### Step2: Pythonコードの提出')
+        upload_and_validate()
+        
+        col1, col2, col3 = st.columns(3)
+        if col1.button('前に戻る', key=f"{ss.problem_id}_prev_1"):
+            countdown()
+        col2.button('はじめから', key=f"{ss.problem_id}_reset_1", on_click=reset)
+        if col3.button('次に進む', key=f"{ss.problem_id}_next_1"):
+            countup()
+        
+    elif ss.now == 2:
+        st.write('#### Step3: 結果の確認')
+        raw_data = pd.read_csv(os.path.join(ss.problem_id, "before.csv"))
+        processed_data = pd.read_csv(os.path.join(ss.problem_id, "after.csv"))
+        compare_results(raw_data, processed_data, ss.user_code)
+        
+        col1, col2, col3 = st.columns(3)
+        if col1.button('前に戻る', key=f"{ss.problem_id}_prev_2"):
+            countdown()
+        col2.button('はじめから', key=f"{ss.problem_id}_reset_2", on_click=reset)
+        col3.button('次に進む', key=f"{ss.problem_id}_next_2", disabled=True)
+        
+    else:
+        st.write('### 完了！')
+        st.success('全てのステップが完了しました')
