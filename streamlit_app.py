@@ -3,6 +3,7 @@ import pandas as pd
 import io
 import os
 import toml
+import traceback
 
 ss = st.session_state
 
@@ -113,22 +114,27 @@ def compare_results(raw_data, processed_data, user_code):
     else:
         with open("answer.py", "w") as f:
             f.write(user_code)
-        answer_module = __import__("answer")
-        result_data = answer_module.preprocess(raw_data)
-        
-        st.write("## 結果")
-        if result_data.equals(processed_data):
-            st.success("正解！")
-        else:
-            st.error("不正解！")
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            st.write("### 期待する結果")
-            st.write(processed_data)
-        with col2:
-            st.write("### 実際の結果")
-            st.write(result_data)
+        try:
+            answer_module = __import__("answer")
+            result_data = answer_module.preprocess(raw_data)
+            
+            st.write("## 結果")
+            if result_data.equals(processed_data):
+                st.success("正解！")
+            else:
+                st.error("不正解！")
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                st.write("### 期待する結果")
+                st.write(processed_data)
+            with col2:
+                st.write("### 実際の結果")
+                st.write(result_data)
+        except Exception as e:
+            st.error("エラーが発生しました。")
+            st.write("### エラーメッセージ")
+            st.write(traceback.format_exc())
 
 # トップページ
 def show_top_page():
@@ -146,8 +152,8 @@ def show_top_page():
     st.header("開発者向け")
     st.write("このアプリのプログラムは、https://github.com/gghatano/preprocess_training にて管理しています。")
     st.write("問題を追加したい場合は、以下の手順に従ってください。")
-    st.write("1. problem0001フォルダの中身を参考に、`problem[0-9]{4}`フォルダを作成し、`explain.toml`、`before.csv`、`after.csv`ファイルを追加してください。")
-    st.write("2. プルリクエストを送信してください。マージしたら反映されます。")
+    st.write("1. `problem****`フォルダを作成し、`toml`、`before.csv`、`after.csv`ファイルを追加してください。")
+    st.write("2. プルリクエストを送信してください。")
 
 # アプリ本体=================================
 
@@ -155,12 +161,13 @@ problems = load_problems()
 
 st.sidebar.title("問題一覧")
 problem_names = {folder: problem['name'] for folder, problem in problems.items()}
-selected_problem = st.sidebar.radio("問題を選択してください", ["トップページ"] + list(problem_names.keys()), format_func=lambda x: problem_names[x] if x != "トップページ" else x)
+sorted_problems = sorted(problem_names.items(), key=lambda x: x[0])
+selected_problem = st.sidebar.radio("問題を選択してください", ["トップページ"] + [f"{problem_id}: {problem_name}" for problem_id, problem_name in sorted_problems], format_func=lambda x: x.split(": ")[1] if ": " in x else x)
 
 if selected_problem == "トップページ":
     show_top_page()
 else:
-    ss.problem_id = selected_problem
+    ss.problem_id = selected_problem.split(": ")[0]
     st.title(problems[ss.problem_id]['name'])
 
     if ss.now == 0:
