@@ -4,6 +4,7 @@ import pandas as pd
 
 def preprocess(df):
     # ここに加工処理を実装する
+hoge
     return df
 
 if __name__ == "__main__":

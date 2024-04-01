@@ -13,6 +13,10 @@ if 'now' not in ss:  # 初期化
     ss.now = 0  # 初期化
     ss.user_code = None  # user_codeの初期化
     ss.problem_id = None  # 問題IDの初期化
+    ss.validation_results = None  # バリデーション結果の初期化
+    ss.is_submitted = False  # 提出状態の初期化
+    ss.result_data = None  # 加工結果の初期化
+    ss.error_message = None  # エラーメッセージの初期化
 
 def countup():  # コールバック関数(1/3):次へ
     ss.now += 1
@@ -23,6 +27,10 @@ def countdown():  # コールバック関数(2/3):戻る
 def reset():  # コールバック関数(3/3):リセット
     ss.now = 0
     ss.user_code = None  # user_codeのリセット
+    ss.validation_results = None  # バリデーション結果のリセット
+    ss.is_submitted = False  # 提出状態のリセット
+    ss.result_data = None  # 加工結果のリセット
+    ss.error_message = None  # エラーメッセージのリセット
 
 # 問題の読み込み
 def load_problems():
@@ -79,13 +87,33 @@ if __name__ == "__main__":
     col3.download_button("サンプルPythonファイルをダウンロード", sample_code, "answer.py", "text/plain")
 
 # ソースコードのアップロードと、アップロードされた内容のバリデーション
-def upload_and_validate():
+def upload_and_validate(raw_data):
     uploaded_code = st.file_uploader("回答のPythonファイルをアップロードしてください", type=["py"])
     
     if uploaded_code is not None:
         code = uploaded_code.read().decode("utf-8")
-        st.code(code, language="python")
-        
+        st.session_state.user_code = code
+    else:
+        code = st.session_state.user_code
+    
+    st.write("### Pythonコードを編集")
+    code_area = st.empty()
+    code = code_area.text_area("Pythonコードを編集してください", value=code or '''
+import sys
+import pandas as pd
+
+def preprocess(df):
+    # ここに加工処理を実装する
+    return df
+
+if __name__ == "__main__":
+    input_file = sys.argv[1]
+    df = pd.read_csv(input_file)
+    processed_df = preprocess(df)
+    processed_df.to_csv("after.csv", index=False)
+''', height=400)
+    
+    if st.button("提出"):
         validation_results = []
         
         if "preprocess" in code:
@@ -98,11 +126,22 @@ def upload_and_validate():
         else:
             validation_results.append(("main関数の変更なし", "NG"))
         
-        st.write("### バリデーション結果")
-        st.table(validation_results)
+        ss.validation_results = validation_results  # バリデーション結果をセッションステートに保存
+        ss.error_message = None  # エラーメッセージをリセット
         
         if all(result[1] == "OK" for result in validation_results):
             ss.user_code = code  # user_codeをセッションステートに保存
+            ss.is_submitted = True  # 提出状態をTrueに設定
+            
+            # プログラムで加工した結果を保存
+            try:
+                with open("answer.py", "w") as f:
+                    f.write(code)
+                answer_module = __import__("answer")
+                result_data = answer_module.preprocess(raw_data.copy())  # raw_dataのコピーを使用
+                ss.result_data = result_data  # 加工結果をセッションステートに保存
+            except Exception as e:
+                ss.error_message = traceback.format_exc()  # エラーメッセージを保存
     
     return ss.user_code
 
@@ -182,14 +221,34 @@ else:
         
     elif ss.now == 1:
         st.write('#### Step2: Pythonコードの提出')
-        upload_and_validate()
+        raw_data = pd.read_csv(os.path.join(ss.problem_id, "before.csv"))
+        upload_and_validate(raw_data)
+        
+        if 'validation_results' in ss:
+            st.write("### バリデーション結果")
+            st.table(ss.validation_results)
+        
+        if 'error_message' in ss and ss.error_message is not None:
+            st.error("エラーが発生しました。")
+            st.write("### エラーメッセージ")
+            st.write(ss.error_message)
+        
+        if 'result_data' in ss:
+            col1, col2 = st.columns(2)
+            with col1:
+                st.write("### before.csv")
+                st.write(raw_data)
+            with col2:
+                st.write("### 加工結果")
+                st.write(ss.result_data)
         
         col1, col2, col3 = st.columns(3)
         if col1.button('前に戻る', key=f"{ss.problem_id}_prev_1"):
             countdown()
         col2.button('はじめから', key=f"{ss.problem_id}_reset_1", on_click=reset)
         if col3.button('次に進む', key=f"{ss.problem_id}_next_1"):
-            countup()
+            if ss.is_submitted:  # 提出済みの場合のみStep3に遷移
+                countup()
         
     elif ss.now == 2:
         st.write('#### Step3: 結果の確認')
